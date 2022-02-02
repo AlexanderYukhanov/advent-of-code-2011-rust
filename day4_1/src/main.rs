@@ -67,7 +67,10 @@ fn main() -> Result<(), Error> {
     let mut input = BufReader::new(File::open("input")?);
     let mut str_selected: String = String::new();
     input.read_line(&mut str_selected).unwrap();
-    let selected = str_selected.split(',').map(|l| l.parse::<i32>().unwrap());
+    let selected = str_selected
+        .trim()
+        .split(',')
+        .map(|l| l.parse::<i32>().unwrap());
 
     let mut boards: Vec<Board> = vec![];
     let mut skip = String::new();
