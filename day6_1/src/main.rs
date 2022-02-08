@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
         prev = cur;
     }
 
-    let result: i32 = input_str
+    let result = input_str
         .trim()
         .split(",")
         .map(|v| v.parse::<usize>().unwrap())
