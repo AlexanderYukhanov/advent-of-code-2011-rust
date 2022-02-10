@@ -1,69 +1,75 @@
 use std::{
+    collections::VecDeque,
     fs::File,
-    io::{BufRead, BufReader, Error}
+    io::{BufRead, BufReader, Error},
 };
 
-fn cost_for_group(group: &Vec<i32>) -> i32 {
-    group.iter().fold(0, |t, f| t + f + 1)
+#[derive(Debug)]
+struct Group {
+    direction: i32,
+    position: i32,
+    elements: u32,
+    last_cost: u32,
 }
 
-fn move_group(group: &mut Vec<i32>) {
-    *group = group.iter().map(|v| v + 1).collect();
-}
-
-fn join_left_group(positions: &Vec<i32>, pos: i32, group: &mut Vec<i32>, mut consumed: usize) -> usize {
-
-    while consumed < positions.len() &&  positions[consumed] == pos {
-        consumed += 1;
-        group.push(0);
+impl Group {
+    fn new(direction: i32, position: i32) -> Group {
+        Group {
+            direction,
+            position,
+            elements: 0,
+            last_cost: 0,
+        }
     }
-    consumed
-}
 
-fn join_right_group(positions: &Vec<i32>, pos: i32, group: &mut Vec<i32>, mut consumed: usize) -> usize {
-    while consumed < positions.len() &&  positions[positions.len() - consumed - 1] == pos {
-        consumed += 1;
-        group.push(0);
+    fn cost_of_move(&self) -> u32 {
+        self.last_cost + self.elements
     }
-    consumed
+
+    fn make_move(&mut self) {
+        self.position += self.direction;
+        self.last_cost += self.elements;
+    }
+
+    fn jon_group(&mut self) {
+        self.elements += 1;
+    }
 }
 
 fn main() -> Result<(), Error> {
     let mut input = BufReader::new(File::open("input")?);
     let mut input_str = String::new();
     input.read_line(&mut input_str).unwrap();
-
     let mut positions: Vec<i32> = input_str
         .trim()
         .split(",")
         .map(|v| v.parse::<i32>().unwrap())
         .collect();
     positions.sort();
+    let mut positions: VecDeque<i32> = positions.iter().cloned().collect();
 
-    let mut left: Vec<i32> = vec![];
-    let mut right: Vec<i32> = vec![];
-    let mut lpos = positions[0] - 1;
-    let mut rpos = positions[positions.len() - 1] + 1;
-    let mut lconsumed: usize = 0;
-    let mut rconsumed: usize = 0;
     let mut cost = 0;
+    let mut left = Group::new(1, positions[0] - 1);
+    let mut right = Group::new(-1, positions[positions.len() - 1] + 1);
 
-    while lpos != rpos {
-        let lprice = cost_for_group(&left);
-        let rprice = cost_for_group(&right);
-        if lprice < rprice {
-            cost += lprice;
-            move_group(&mut left);
-            lpos += 1;
-            lconsumed = join_left_group(&positions, lpos, &mut left, lconsumed);
+    while left.position != right.position {
+        if left.cost_of_move() < right.cost_of_move() {
+            cost += left.cost_of_move();
+            left.make_move();
+            while !positions.is_empty() && *positions.front().expect("") == left.position {
+                left.jon_group();
+                positions.pop_front();
+            }
         } else {
-            cost += rprice;
-            move_group(&mut right);
-            rpos -= 1;
-            rconsumed = join_right_group(&positions, rpos, &mut right, rconsumed);
+            cost += right.cost_of_move();
+            right.make_move();
+            while !positions.is_empty() && *positions.back().expect("") == right.position {
+                right.jon_group();
+                positions.pop_back();
+            }
         }
     }
-    println!("Result: {}", cost);
 
+    println!("Result: {}", cost);
     Ok(())
 }
