@@ -4,17 +4,19 @@ use std::{
     io::{BufRead, BufReader, Error},
 };
 
+use arraytools::ArrayTools;
+
 #[derive(Debug, Clone)]
 struct Digit {
     value: usize,
     indicators: HashSet<char>,
 }
 
-fn unk() -> Digit {
-    Digit::new(42, "")
-}
-
 impl Digit {
+    fn unknown() -> Digit {
+        Digit::new(42, "")
+    }
+
     fn new(value: usize, indicators: &str) -> Digit {
         Digit {
             value,
@@ -72,26 +74,21 @@ fn main() -> Result<(), Error> {
     let input = BufReader::new(File::open("input")?);
     let mut result = 0_usize;
     for line in input.lines() {
+        let mut digits: [Digit; 10] = ArrayTools::generate(Digit::unknown);
+
         let line = line.unwrap();
         let left_right = line.split('|').collect::<Vec<&str>>();
-        let mut digits: [Digit; 10] = [
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-            unk(),
-        ];
+
         let mut signals = left_right[0].trim().split(' ').collect::<Vec<&str>>();
         signals.sort_by(|a, b| a.len().cmp(&b.len()));
+
+        // recognize all digits from signals
         for signal in signals {
             let digit = to_digit(signal, &digits);
             digits[digit.value] = digit.clone();
         }
+
+        // convert values
         let mut num = 0_usize;
         for s in left_right[1].trim().split(" ") {
             let ind = digits.iter().position(|d| d.is(s)).unwrap();
