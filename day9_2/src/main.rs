@@ -1,57 +1,37 @@
 use std::{
-    collections::VecDeque,
-    error::Error,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Error},
 };
 
-struct Position {
-    j: usize,
-    i: usize,
-}
-
-impl Position {
-    fn new(j: usize, i: usize) -> Position {
-        Position { j, i }
+fn fill(j: usize, i: usize, map: &mut Vec<Vec<char>>) -> usize {
+    let mut total = 1_usize;
+    let mut pending: Vec<(usize, usize)> = vec![];
+    pending.push((j, i));
+    map[j][i] = '9';
+    while !pending.is_empty() {
+        let (y, x) = pending.pop().unwrap();
+        [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            .iter()
+            .for_each(|(dy, dx)| {
+                let y = (y as isize + dy) as usize;
+                let x = (x as isize + dx) as usize;
+                if '9'
+                    != map
+                        .get(y)
+                        .and_then(|v| v.get(x))
+                        .and_then(|v| Some(*v))
+                        .unwrap_or('9')
+                {
+                    pending.push((y, x));
+                    map[y][x] = '9';
+                    total += 1;
+                }
+            });
     }
+    total
 }
 
-fn is_good(j: usize, i: usize, map: &Vec<Vec<char>>) -> bool {
-    map[j][i] != '9'
-}
-
-fn flood_fill(j: usize, i: usize, map: &mut Vec<Vec<char>>) -> u32 {
-    if !is_good(j, i, map) {
-        return 0;
-    }
-
-    let mut result = 0_u32;
-    let mut candidates = VecDeque::<Position>::new();
-    candidates.push_back(Position::new(j, i));
-    while !candidates.is_empty() {
-        let c = candidates.pop_front().expect("checked for is_empty above");
-        if !is_good(c.j, c.i, map) {
-            continue;
-        }
-        result += 1;
-        map[c.j][c.i] = '9';
-        if c.j > 0 {
-            candidates.push_back(Position::new(c.j - 1, c.i));
-        }
-        if c.i > 0 {
-            candidates.push_back(Position::new(c.j, c.i - 1));
-        }
-        if c.j + 1 < map.len() {
-            candidates.push_back(Position::new(c.j + 1, c.i));
-        }
-        if c.i + 1 < map[c.j].len() {
-            candidates.push_back(Position::new(c.j, c.i + 1));
-        }
-    }
-    result
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     let input = BufReader::new(File::open("input")?);
     let mut map: Vec<Vec<char>> = input
         .lines()
@@ -59,16 +39,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|v| v.chars().collect())
         .collect();
 
-    let mut areas = vec![0_u32];
+    let mut results = vec![0];
     for j in 0..map.len() {
         for i in 0..map[j].len() {
-            if is_good(j, i, &map) {
-                areas.push(flood_fill(j, i, &mut map));
+            if map[j][i] != '9' {
+                results.push(fill(j, i, &mut map));
             }
         }
     }
-    areas.select_nth_unstable_by(2, |a, b| b.cmp(a));
 
-    println!("Result: {}", areas[0] * areas[1] * areas[2]);
+    results.select_nth_unstable_by(2, |a, b| b.cmp(a));
+    println!("Result: {}", results.iter().take(3).product::<usize>());
     Ok(())
 }
